@@ -416,6 +416,26 @@ button.secondary:hover {
   width: 70px;
 }
 
+.ocr-option {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid light-dark(var(--light-border), var(--dark-border));
+  width: 100%;
+  text-align: center;
+}
+
+.ocr-option label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.ocr-option .import-hint {
+  margin-top: 4px;
+}
+
 #pdfPreviewContainer {
   max-height: 200px;
   overflow-y: auto;

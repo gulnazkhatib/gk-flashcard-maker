@@ -5,6 +5,7 @@
 import {GoogleGenAI} from '@google/genai';
 import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
+import Tesseract from 'tesseract.js';
 
 // Set worker source for pdf.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@4.3.136/build/pdf.worker.mjs`;
@@ -47,6 +48,7 @@ const customRangeRadio = document.getElementById('customRangeRadio') as HTMLInpu
 const pageRangeSelector = document.getElementById('pageRangeSelector') as HTMLDivElement;
 const startPageInput = document.getElementById('startPageInput') as HTMLInputElement;
 const endPageInput = document.getElementById('endPageInput') as HTMLInputElement;
+const ocrCheckbox = document.getElementById('ocrCheckbox') as HTMLInputElement;
 
 const generateButton = document.getElementById('generateButton') as HTMLButtonElement;
 const importButton = document.getElementById('importButton') as HTMLButtonElement;
@@ -229,9 +231,9 @@ async function renderPdfPagePreview(pageNumber: number) {
         const viewport = page.getViewport({ scale: 0.5 });
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-
-        // FIX: The RenderParameters object for `page.render` requires the `canvas` property according to the project's type definitions.
-        await page.render({ canvas, canvasContext: context, viewport: viewport }).promise;
+        
+        // FIX: Add canvas property to render parameters to fix TypeScript error.
+        await page.render({ canvas: canvas, canvasContext: context, viewport: viewport }).promise;
         pdfPreviewContainer.appendChild(canvas);
     } catch (err) {
         console.error(`Error rendering page ${pageNumber}:`, err);
@@ -246,19 +248,24 @@ async function updatePdfPreview() {
     let startPage = parseInt(startPageInput.value, 10);
     let endPage = parseInt(endPageInput.value, 10);
 
+    // Validate the range. If invalid, do nothing.
     if (isNaN(startPage) || isNaN(endPage) || startPage < 1 || endPage > numPages || startPage > endPage) {
-        return; // Invalid range, do nothing
+        return;
     }
 
-    // Limit previews to a reasonable number to avoid performance issues
-    const maxPreviews = 5;
-    if (endPage - startPage + 1 > maxPreviews) {
-        pdfPreviewContainer.innerHTML = `<p class="import-hint">Preview limited to first ${maxPreviews} pages of selection.</p>`;
-        endPage = startPage + maxPreviews - 1;
-    }
-    
-    for (let i = startPage; i <= endPage; i++) {
-        await renderPdfPagePreview(i);
+    // Render the start page thumbnail
+    await renderPdfPagePreview(startPage);
+
+    // If the start and end pages are different, render the end page thumbnail
+    if (startPage < endPage) {
+        const separator = document.createElement('div');
+        separator.textContent = '...';
+        separator.style.textAlign = 'center';
+        separator.style.margin = '8px 0';
+        separator.style.fontWeight = 'bold';
+        separator.style.color = 'var(--dark-text-secondary)';
+        pdfPreviewContainer.appendChild(separator);
+        await renderPdfPagePreview(endPage);
     }
 }
 
@@ -467,6 +474,10 @@ cancelPdfButton.addEventListener('click', () => {
 generateFromPdfButton.addEventListener('click', async () => {
   if (!currentPdfDoc) return;
 
+  // Disable buttons to prevent race conditions
+  generateFromPdfButton.disabled = true;
+  cancelPdfButton.disabled = true;
+
   const useAllPages = allPagesRadio.checked;
   const numPages = currentPdfDoc.numPages;
   let startPage = useAllPages ? 1 : parseInt(startPageInput.value, 10);
@@ -474,23 +485,83 @@ generateFromPdfButton.addEventListener('click', async () => {
 
   if (!useAllPages && (isNaN(startPage) || isNaN(endPage) || startPage < 1 || endPage > numPages || startPage > endPage)) {
       alert('Invalid page range. Please enter a valid start and end page within the document\'s limits.');
+      generateFromPdfButton.disabled = false;
+      cancelPdfButton.disabled = false;
       return;
   }
 
   pdfOptionsModal.classList.add('hidden');
+  
+  const performOcr = ocrCheckbox.checked;
+  let tesseractWorker: Tesseract.Worker | null = null;
+  
+  if (performOcr) {
+      setErrorMessage('Initializing OCR engine...');
+      try {
+          tesseractWorker = await Tesseract.createWorker('eng', 1, {
+              logger: m => {
+                  if (m.status === 'recognizing text') {
+                      const progress = (m.progress * 100).toFixed(0);
+                      setErrorMessage(`Performing OCR... ${progress}%`);
+                  } else if (m.status && m.status.includes('loading')) {
+                      setErrorMessage('Loading OCR model...');
+                  } else if (m.status === 'initializing tesseract') {
+                      setErrorMessage('Initializing OCR engine...');
+                  }
+              }
+          });
+      } catch (err) {
+          console.error('Error initializing Tesseract worker:', err);
+          setErrorMessage('Could not initialize OCR engine. Please try again.', true);
+          currentPdfDoc = null;
+          generateFromPdfButton.disabled = false;
+          cancelPdfButton.disabled = false;
+          return;
+      }
+  }
+  
   setErrorMessage('Extracting text from PDF...');
   
   let extractedText = '';
   try {
       for (let i = startPage; i <= endPage; i++) {
-          const page = await currentPdfDoc.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageText = textContent.items.map(item => ('str' in item ? item.str : '')).join(' ');
-          extractedText += pageText + '\n\n';
+        try {
+            setErrorMessage(`Processing page ${i} of ${endPage}...`);
+            const page = await currentPdfDoc.getPage(i);
+            
+            if (performOcr && tesseractWorker) {
+                // OCR Path: Render page to canvas and recognize text.
+                const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better OCR accuracy
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                if (!context) {
+                    console.warn(`Could not get 2D context for page ${i}. Skipping.`);
+                    continue;
+                };
+
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                
+                // FIX: Add canvas property to render parameters to fix TypeScript error.
+                await page.render({ canvas: canvas, canvasContext: context, viewport: viewport }).promise;
+                const { data: { text } } = await tesseractWorker.recognize(canvas);
+                if (text) {
+                    extractedText += text + '\n\n';
+                }
+            } else {
+                // Standard text extraction for non-OCR tasks.
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => ('str' in item ? item.str : '')).join(' ');
+                extractedText += pageText + '\n\n';
+            }
+        } catch (pageErr) {
+            console.error(`Failed to process page ${i}. Skipping.`, pageErr);
+            // Continue to the next page
+        }
       }
 
       if (!extractedText.trim()) {
-          setErrorMessage('Could not extract any text from the selected PDF pages.', true);
+          setErrorMessage('Could not extract any text from the selected PDF pages. If it is a scanned document, please try again with the OCR option enabled.', true);
           return;
       }
       
@@ -501,7 +572,10 @@ generateFromPdfButton.addEventListener('click', async () => {
       console.error('Error processing PDF pages:', err);
       setErrorMessage('An error occurred while extracting text from the PDF.', true);
   } finally {
+      if (tesseractWorker) await tesseractWorker.terminate();
       currentPdfDoc = null; // Clean up
+      generateFromPdfButton.disabled = false;
+      cancelPdfButton.disabled = false;
   }
 });
 

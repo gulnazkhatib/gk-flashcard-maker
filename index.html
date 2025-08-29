@@ -10,7 +10,8 @@
     "imports": {
       "@google/genai": "https://esm.sh/@google/genai@^0.7.0",
       "mammoth": "https://esm.sh/mammoth@1.7.2",
-      "pdfjs-dist": "https://esm.sh/pdfjs-dist@4.3.136"
+      "pdfjs-dist": "https://esm.sh/pdfjs-dist@4.3.136",
+      "tesseract.js": "https://esm.sh/tesseract.js@5.1.0"
     }
   }
   </script>
@@ -128,6 +129,13 @@
            <input type="number" id="startPageInput" min="1">
            <label for="endPageInput">End:</label>
            <input type="number" id="endPageInput" min="1">
+        </div>
+        <div class="ocr-option">
+          <label>
+            <input type="checkbox" id="ocrCheckbox">
+            Include text from images (OCR)
+          </label>
+          <p class="import-hint">Slower, but useful for scanned documents.</p>
         </div>
       </div>
       <div id="pdfPreviewContainer"></div>
