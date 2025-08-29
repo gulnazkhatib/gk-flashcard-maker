@@ -1,5 +1,5 @@
 {
-  "name": "Copy of Flashcard Maker",
-  "description": "Instantly create interactive flashcards for any topic ! Learn smarter, not harder.",
+  "name": "Flashcard Maker",
+  "description": "Create flashcards from text, documents, or by topic.",
   "requestFramePermissions": []
 }

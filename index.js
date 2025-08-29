@@ -25,6 +25,7 @@ const preStudyTopic = document.getElementById('preStudyTopic');
 const totalPagesSpan = document.getElementById('totalPagesSpan');
 const sourceContentPreview = document.getElementById('sourceContentPreview');
 const pdfPreviewContainer = document.getElementById('pdfPreviewContainer');
+const cardProgress = document.getElementById('cardProgress');
 
 const topicInput = document.getElementById('topicInput');
 const timerInput = document.getElementById('timerInput');
@@ -46,12 +47,16 @@ const generateNewButton2 = document.getElementById('generateNewButton2');
 const studyAgainButton = document.getElementById('studyAgainButton');
 const generateFromPdfButton = document.getElementById('generateFromPdfButton');
 const cancelPdfButton = document.getElementById('cancelPdfButton');
+const prevCardButton = document.getElementById('prevCardButton');
+const nextCardButton = document.getElementById('nextCardButton');
+
 
 // --- App State ---
 let activeStudySet = null;
 let timerInterval = null;
 let currentPdfDoc = null;
 let previewDebounceTimeout = null;
+let currentCardIndex = 0;
 
 const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
 
@@ -115,43 +120,48 @@ function startTimer(durationMinutes) {
 }
 
 // --- Flashcard Rendering ---
-function renderFlashcards() {
-  flashcardsContainer.textContent = ''; // Clear previous cards
-  if (!activeStudySet) return;
+function showCard(index) {
+  flashcardsContainer.textContent = ''; // Clear previous card
+  if (!activeStudySet || !activeStudySet.cards[index]) return;
 
   const studyMode = document.querySelector('input[name="studyMode"]:checked').value;
+  const flashcard = activeStudySet.cards[index];
 
-  activeStudySet.cards.forEach((flashcard, index) => {
-    const cardDiv = document.createElement('div');
-    cardDiv.classList.add('flashcard');
-    cardDiv.dataset['index'] = index.toString();
+  const cardDiv = document.createElement('div');
+  cardDiv.classList.add('flashcard');
 
-    const cardInner = document.createElement('div');
-    cardInner.classList.add('flashcard-inner');
+  const cardInner = document.createElement('div');
+  cardInner.classList.add('flashcard-inner');
 
-    const cardFront = document.createElement('div');
-    cardFront.classList.add('flashcard-front');
-    const frontContent = document.createElement('div');
-    frontContent.textContent = studyMode === 'termFirst' ? flashcard.term : flashcard.definition;
-    frontContent.classList.add(studyMode === 'termFirst' ? 'term' : 'definition');
-    cardFront.appendChild(frontContent);
-    
-    const cardBack = document.createElement('div');
-    cardBack.classList.add('flashcard-back');
-    const backContent = document.createElement('div');
-    backContent.textContent = studyMode === 'termFirst' ? flashcard.definition : flashcard.term;
-    backContent.classList.add(studyMode === 'termFirst' ? 'definition' : 'term');
-    cardBack.appendChild(backContent);
+  const cardFront = document.createElement('div');
+  cardFront.classList.add('flashcard-front');
+  const frontContent = document.createElement('div');
+  frontContent.textContent = studyMode === 'termFirst' ? flashcard.term : flashcard.definition;
+  frontContent.classList.add(studyMode === 'termFirst' ? 'term' : 'definition');
+  cardFront.appendChild(frontContent);
+  
+  const cardBack = document.createElement('div');
+  cardBack.classList.add('flashcard-back');
+  const backContent = document.createElement('div');
+  backContent.textContent = studyMode === 'termFirst' ? flashcard.definition : flashcard.term;
+  backContent.classList.add(studyMode === 'termFirst' ? 'definition' : 'term');
+  cardBack.appendChild(backContent);
 
-    cardInner.appendChild(cardFront);
-    cardInner.appendChild(cardBack);
-    cardDiv.appendChild(cardInner);
-    flashcardsContainer.appendChild(cardDiv);
+  cardInner.appendChild(cardFront);
+  cardInner.appendChild(cardBack);
+  cardDiv.appendChild(cardInner);
+  flashcardsContainer.appendChild(cardDiv);
 
-    cardDiv.addEventListener('click', () => {
-      cardDiv.classList.toggle('flipped');
-    });
+  cardDiv.addEventListener('click', () => {
+    cardDiv.classList.toggle('flipped');
   });
+
+  // Update progress and navigation
+  cardProgress.textContent = `${index + 1} / ${activeStudySet.cards.length}`;
+  const totalCards = activeStudySet.cards.length;
+  // Only disable buttons if there's one or zero cards, otherwise enable for looping
+  prevCardButton.disabled = totalCards <= 1;
+  nextCardButton.disabled = totalCards <= 1;
 }
 
 // --- Import/Export Logic ---
@@ -406,7 +416,8 @@ startButton.addEventListener('click', () => {
     return;
   }
   setErrorMessage('');
-  renderFlashcards();
+  currentCardIndex = 0;
+  showCard(currentCardIndex);
   startTimer(duration);
   setViewState('STUDY');
 });
@@ -425,6 +436,7 @@ function resetToGenerator() {
   flashcardsContainer.textContent = '';
   topicInput.value = '';
   setErrorMessage('');
+  currentCardIndex = 0;
   setViewState('GENERATION');
 }
 
@@ -437,6 +449,22 @@ generateNewButton2.addEventListener('click', resetToGenerator);
 importButton.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', handleImport);
 exportButton.addEventListener('click', handleExport);
+
+prevCardButton.addEventListener('click', () => {
+  if (!activeStudySet || activeStudySet.cards.length === 0) return;
+  const totalCards = activeStudySet.cards.length;
+  // Loop to the last card if at the first card
+  currentCardIndex = (currentCardIndex - 1 + totalCards) % totalCards;
+  showCard(currentCardIndex);
+});
+
+nextCardButton.addEventListener('click', () => {
+  if (!activeStudySet || activeStudySet.cards.length === 0) return;
+  const totalCards = activeStudySet.cards.length;
+  // Loop to the first card if at the last card
+  currentCardIndex = (currentCardIndex + 1) % totalCards;
+  showCard(currentCardIndex);
+});
 
 // PDF Modal Listeners
 allPagesRadio.addEventListener('change', () => {

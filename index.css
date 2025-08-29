@@ -33,7 +33,7 @@
   --dark-button-focus-shadow-color: rgba(138, 180, 248, 0.4);
   --light-button-text: white;
   --dark-button-text: var(--dark-bg); /* Use dark background for text on light blue */
-  --flashcard-height: 150px; /* Make height consistent */
+  --flashcard-height: 250px; /* Make height consistent */
 }
 
 body {
@@ -281,34 +281,93 @@ button.secondary:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 15px;
+}
+
+#cardProgress {
+  font-size: 1em;
+  font-weight: 500;
+  color: light-dark(var(--light-text-secondary), var(--dark-text-secondary));
+  flex-grow: 1;
+  text-align: left;
 }
 
 #timerDisplay {
   font-size: 2.5em;
   font-weight: 500;
   color: light-dark(var(--light-primary), var(--dark-primary));
-  margin-bottom: 0;
+  margin: 0 auto;
+}
+
+.study-view {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.nav-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 0;
+  height: 0;
+  padding: 0;
+  flex-shrink: 0;
+  border-top: 25px solid transparent;
+  border-bottom: 25px solid transparent;
+  transition: all 0.2s ease;
+}
+
+#prevCardButton {
+  border-right: 35px solid light-dark(var(--light-text-secondary), var(--dark-text-secondary));
+}
+
+#nextCardButton {
+  border-left: 35px solid light-dark(var(--light-text-secondary), var(--dark-text-secondary));
+}
+
+.nav-button:hover:not(:disabled) {
+  transform: scale(1.1);
+}
+
+#prevCardButton:hover:not(:disabled) {
+  border-right-color: light-dark(var(--light-primary), var(--dark-primary));
+}
+
+#nextCardButton:hover:not(:disabled) {
+  border-left-color: light-dark(var(--light-primary), var(--dark-primary));
+}
+
+.nav-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
 }
 
 .flashcards-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 25px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   perspective: 1000px;
   width: 100%;
+  min-height: calc(var(--flashcard-height) + 20px);
 }
 
 .flashcard {
   background-color: transparent;
   height: var(--flashcard-height);
+  width: 100%;
+  max-width: 450px;
   border: none;
   border-radius: 10px;
   cursor: pointer;
   perspective: 1000px;
   box-shadow: none;
+  flex-shrink: 0;
 }
 
 .flashcard-inner {
@@ -532,14 +591,38 @@ button.secondary:hover {
   }
 
   .study-header {
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: space-between;
     align-items: center;
     gap: 10px;
   }
   
   #timerDisplay {
     font-size: 2.2em;
+    order: 0;
+    margin: 0;
+  }
+  
+  #cardProgress {
     order: -1;
+    text-align: left;
+  }
+
+  .study-view {
+    gap: 10px;
+  }
+
+  .nav-button {
+    border-top-width: 20px;
+    border-bottom-width: 20px;
+  }
+
+  #prevCardButton {
+    border-right-width: 25px;
+  }
+
+  #nextCardButton {
+    border-left-width: 25px;
   }
 
   .button-group {

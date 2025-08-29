@@ -28,10 +28,6 @@
 <body>
 
   <div class="container">
-    <header class="app-header">
-      <div class="brand-name">GK</div>
-    </header>
-
     <!-- Generation View -->
     <div id="generationContainer">
       <h1>Flashcard Generator</h1>
@@ -86,11 +82,16 @@
     <!-- Study Session View -->
     <div id="studyContainer" class="hidden">
       <div class="study-header">
+        <div id="cardProgress"></div>
         <div id="timerDisplay">05:00</div>
         <button id="stopButton" class="secondary">Stop Session</button>
       </div>
-      <div id="flashcardsContainer" class="flashcards-container">
-        <!-- Flashcards will be generated here -->
+      <div id="studyView" class="study-view">
+        <button id="prevCardButton" class="nav-button" aria-label="Previous card"></button>
+        <div id="flashcardsContainer" class="flashcards-container">
+          <!-- Single flashcard will be generated here -->
+        </div>
+        <button id="nextCardButton" class="nav-button" aria-label="Next card"></button>
       </div>
     </div>
 

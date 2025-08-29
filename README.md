@@ -1,20 +1,27 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Flashcard Generator
 
-# Run and deploy your AI Studio app
+A web-based application to automatically generate and study flashcards from text, documents, or topics using AI.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/drive/1qd8PjUk29gvuuctL-fHgpwfmhFJFinhb
+-   **AI-Powered Generation**: Paste any text, article, or topic, and the application will intelligently create flashcards with terms and definitions.
+-   **File Import**: Supports importing `.txt`, `.docx`, and `.pdf` files to generate study sets from your existing notes and documents.
+-   **OCR for PDFs**: Includes an option to perform Optical Character Recognition (OCR) on scanned PDFs to extract text from images.
+-   **Customizable Study Sessions**: Set a timer and choose your study mode (Term first or Definition first) for focused learning.
+-   **Interactive Flashcards**: Flip cards with a simple click to reveal the answer.
+-   **Export**: Save your generated flashcard sets as a `.txt` file for offline use or sharing.
 
-## Run Locally
+## How to Use
 
-**Prerequisites:**  Node.js
+1.  **Generate**: Open the application, paste your text into the text area, and click "Generate Flashcards".
+2.  **Import**: Click the "Import" button to upload a `.txt`, `.docx`, or `.pdf` file.
+3.  **Study**: Once your flashcards are ready, set a timer, choose your study mode, and start your session.
+4.  **Export**: After a set is generated, you can export it for later use.
 
+## Technologies Used
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+-   HTML5, CSS3, JavaScript
+-   Google Gemini API for AI-powered content generation.
+-   `pdf.js` for PDF rendering and text extraction.
+-   `Tesseract.js` for client-side OCR.
+-   `mammoth.js` for parsing `.docx` files.
