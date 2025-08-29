@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flashcard Generator</title>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "@google/genai": "https://esm.sh/@google/genai@^0.7.0"
+    }
+  }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Google+Sans:wght@400;500&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="index.css">
+
+</head>
+<body>
+
+  <div class="container">
+    <header class="app-header">
+      <div class="brand-name">GK</div>
+    </header>
+
+    <!-- Generation View -->
+    <div id="generationContainer">
+      <h1>Flashcard Generator</h1>
+      <p>
+        Enter a topic or a list of terms and definitions to generate flashcards.
+      </p>
+      <textarea
+        id="topicInput"
+        placeholder="Enter topic (e.g., Ancient Rome) or 'Term: Definition' pairs (one per line)"
+      ></textarea>
+      <div class="button-group">
+        <button id="generateButton">Generate Flashcards</button>
+        <button id="importButton" class="secondary">Import Cards</button>
+      </div>
+      <input type="file" id="fileInput" class="hidden" accept=".txt">
+    </div>
+
+    <!-- Pre-Study Setup View -->
+    <div id="preStudyContainer" class="hidden">
+      <h2 id="preStudyTopic">Ready to Study?</h2>
+      <div class="settings-group">
+        <label class="settings-label">Study Mode:</label>
+        <div class="radio-group">
+          <input type="radio" id="termFirst" name="studyMode" value="termFirst" checked>
+          <label for="termFirst">Term ➡️ Definition</label>
+          <input type="radio" id="definitionFirst" name="studyMode" value="definitionFirst">
+          <label for="definitionFirst">Definition ➡️ Term</label>
+        </div>
+      </div>
+      <div class="settings-group">
+        <label for="timerInput" class="settings-label">Study for (minutes):</label>
+        <input type="number" id="timerInput" value="5" min="1" max="60">
+      </div>
+      <div class="button-group">
+        <button id="startButton">Start Study Session</button>
+        <button id="exportButton" class="secondary">Export Cards</button>
+        <button id="generateNewButton" class="secondary">Generate New Cards</button>
+      </div>
+    </div>
+
+    <!-- Study Session View -->
+    <div id="studyContainer" class="hidden">
+      <div class="study-header">
+        <div id="timerDisplay">05:00</div>
+        <button id="stopButton" class="secondary">Stop Session</button>
+      </div>
+      <div id="flashcardsContainer" class="flashcards-container">
+        <!-- Flashcards will be generated here -->
+      </div>
+    </div>
+
+    <!-- Session Complete View -->
+    <div id="sessionCompleteContainer" class="hidden">
+      <h2>Time's Up!</h2>
+      <p>Great work on your study session.</p>
+      <div class="button-group">
+        <button id="studyAgainButton">Study Again</button>
+        <button id="generateNewButton2" class="secondary">Generate New Cards</button>
+      </div>
+    </div>
+
+    <div id="errorMessage" class="error-message"></div>
+
+  </div>
+  
+  <!-- Main Script -->
+  <script type="module" src="index.tsx"></script>
+
+</body>
+</html>
