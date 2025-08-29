@@ -15,6 +15,8 @@
   --dark-border: #5f6368;
   --light-error: #d93025;
   --dark-error: #f28b82;
+  --light-success: #1e8e3e;
+  --dark-success: #81c995;
   --light-card-bg: #e8f0fe; /* Light blue background for cards */
   --dark-card-bg: #3c4043; /* Darker grey for cards */
   --light-disabled-bg: #e0e0e0;
@@ -204,10 +206,20 @@ button.secondary:hover {
     font-weight: 500;
     min-height: 1.5em;
     font-size: 0.9em; /* Smaller font size */
+    transition: font-size 0.3s ease, color 0.3s ease;
 }
 
 .error-message.is-error {
     color: light-dark(var(--light-error), var(--dark-error));
+}
+
+.error-message.is-loading {
+    font-size: 1.2em;
+    color: light-dark(var(--light-text-primary), var(--dark-text-primary));
+}
+
+.error-message.is-success {
+    color: light-dark(var(--light-success), var(--dark-success));
 }
 
 

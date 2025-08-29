@@ -96,9 +96,12 @@ function setViewState(view: ViewState) {
 }
 
 // --- UI Messaging ---
-function setErrorMessage(message: string, isError: boolean = false) {
+function setErrorMessage(message: string, isError: boolean = false, isSuccess: boolean = false) {
     errorMessage.textContent = message;
     errorMessage.classList.toggle('is-error', isError);
+    errorMessage.classList.toggle('is-success', isSuccess);
+    // A message is a loading/status message if it's not an error and not a success message.
+    errorMessage.classList.toggle('is-loading', !isError && !isSuccess && !!message);
 }
 
 // --- Timer Logic ---
@@ -190,36 +193,6 @@ function handleExport() {
   URL.revokeObjectURL(url);
 }
 
-function processImportedText(text: string) {
-    if (!text) {
-        setErrorMessage('File is empty or could not be read.', true);
-        return;
-    }
-
-    const parsedCards: Flashcard[] = text
-        .split('\n')
-        .map((line) => {
-            const parts = line.split(':');
-            if (parts.length >= 2 && parts[0].trim()) {
-                const term = parts[0].trim();
-                const definition = parts.slice(1).join(':').trim();
-                if (definition) {
-                    return { term, definition };
-                }
-            }
-            return null;
-        })
-        .filter((card): card is Flashcard => card !== null);
-
-    if (parsedCards.length > 0) {
-        activeStudySet = { topic: "Imported Flashcard Set", cards: parsedCards, sourceContent: text };
-        setErrorMessage('');
-        setViewState('PRE_STUDY');
-    } else {
-        setErrorMessage("Could not parse flashcards from the file. Ensure the format is 'Term: Definition' per line.", true);
-    }
-}
-
 async function renderPdfPagePreview(pageNumber: number) {
     if (!currentPdfDoc) return;
     try {
@@ -269,7 +242,7 @@ async function updatePdfPreview() {
     }
 }
 
-function handleImport(event: Event) {
+async function handleImport(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
@@ -286,14 +259,35 @@ function handleImport(event: Event) {
 
     const reader = new FileReader();
     reader.onerror = () => setErrorMessage('Error reading file.', true);
+    
+    // Helper to pause for user feedback
+    const waitForFeedback = () => new Promise(resolve => setTimeout(resolve, 1500));
 
     if (isTxt) {
-        reader.onload = (e) => processImportedText(e.target?.result as string);
+        reader.onload = async (e) => {
+            const text = e.target?.result as string;
+            if (!text) {
+                setErrorMessage('File is empty or could not be read.', true);
+                return;
+            }
+            setErrorMessage(`${file.name} uploaded successfully.`, false, true);
+            await waitForFeedback();
+            await generateCardsFromText(text, `Flashcards from ${file.name}`);
+        };
         reader.readAsText(file);
     } else if (isDocx) {
         reader.onload = (e) => {
             mammoth.extractRawText({ arrayBuffer: e.target?.result as ArrayBuffer })
-                .then(result => processImportedText(result.value))
+                .then(async result => {
+                    const text = result.value;
+                     if (!text) {
+                        setErrorMessage('File is empty or could not be read.', true);
+                        return;
+                    }
+                    setErrorMessage(`${file.name} uploaded successfully.`, false, true);
+                    await waitForFeedback();
+                    await generateCardsFromText(text, `Flashcards from ${file.name}`);
+                })
                 .catch(err => {
                     console.error('Error parsing .docx file:', err);
                     setErrorMessage('Could not extract text from the .docx file.', true);
@@ -303,8 +297,13 @@ function handleImport(event: Event) {
     } else if (isPdf) {
         reader.onload = async (e) => {
             try {
+                setErrorMessage(`Processing ${file.name}...`);
                 const loadingTask = pdfjsLib.getDocument({ data: e.target?.result as ArrayBuffer });
                 currentPdfDoc = await loadingTask.promise;
+                
+                setErrorMessage(`${file.name} uploaded successfully.`, false, true);
+                await waitForFeedback();
+                
                 totalPagesSpan.textContent = String(currentPdfDoc.numPages);
                 startPageInput.max = String(currentPdfDoc.numPages);
                 endPageInput.max = String(currentPdfDoc.numPages);
@@ -315,6 +314,8 @@ function handleImport(event: Event) {
                 pageRangeSelector.classList.add('hidden');
                 pdfPreviewContainer.innerHTML = '';
                 pdfOptionsModal.classList.remove('hidden');
+                setErrorMessage('Please select the page range to generate flashcards from.');
+
             } catch (err) {
                 console.error('Error loading PDF:', err);
                 setErrorMessage('Could not load the PDF file. It may be corrupted or protected.', true);
@@ -328,14 +329,19 @@ function handleImport(event: Event) {
 
 // --- AI Generation Logic ---
 async function generateCardsFromText(content: string, topic: string) {
-  setErrorMessage('Generating flashcards...');
+  setErrorMessage('Generating flashcards... please wait...');
   generateButton.disabled = true;
+  generateButton.textContent = 'Generating...';
   importButton.disabled = true;
 
   try {
-    const prompt = `Generate a list of flashcards based on the following content: "${content}". Each flashcard should have a term and a concise definition. Format the output as a list of "Term: Definition" pairs, with each pair on a new line. Ensure terms and definitions are distinct and clearly separated by a single colon. Here's an example output:
-    Hello: Hola
-    Goodbye: Adiós`;
+    const prompt = `Analyze the following text and identify the key concepts. For each key concept, create a flashcard with a clear 'term' and a concise 'definition'. The text to analyze is: "${content}"
+
+Format your response as a list of "Term: Definition" pairs. Each pair must be on a new line. Do not include any other text or explanations.
+
+Example format:
+Term 1: Definition 1
+Term 2: Definition 2`;
     const result = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
@@ -392,6 +398,7 @@ async function generateCardsFromText(content: string, topic: string) {
     setErrorMessage(userFriendlyMessage, true);
   } finally {
     generateButton.disabled = false;
+    generateButton.textContent = 'Generate Flashcards';
     importButton.disabled = false;
   }
 }
@@ -469,13 +476,15 @@ endPageInput.addEventListener('input', debouncedPreview);
 cancelPdfButton.addEventListener('click', () => {
   pdfOptionsModal.classList.add('hidden');
   currentPdfDoc = null;
+  setErrorMessage('');
 });
 
 generateFromPdfButton.addEventListener('click', async () => {
   if (!currentPdfDoc) return;
 
-  // Disable buttons to prevent race conditions
+  // Disable buttons and show loading state to prevent multiple clicks
   generateFromPdfButton.disabled = true;
+  generateFromPdfButton.textContent = 'Generating...';
   cancelPdfButton.disabled = true;
 
   const useAllPages = allPagesRadio.checked;
@@ -486,6 +495,7 @@ generateFromPdfButton.addEventListener('click', async () => {
   if (!useAllPages && (isNaN(startPage) || isNaN(endPage) || startPage < 1 || endPage > numPages || startPage > endPage)) {
       alert('Invalid page range. Please enter a valid start and end page within the document\'s limits.');
       generateFromPdfButton.disabled = false;
+      generateFromPdfButton.textContent = 'Generate';
       cancelPdfButton.disabled = false;
       return;
   }
@@ -515,6 +525,7 @@ generateFromPdfButton.addEventListener('click', async () => {
           setErrorMessage('Could not initialize OCR engine. Please try again.', true);
           currentPdfDoc = null;
           generateFromPdfButton.disabled = false;
+          generateFromPdfButton.textContent = 'Generate';
           cancelPdfButton.disabled = false;
           return;
       }
@@ -574,7 +585,9 @@ generateFromPdfButton.addEventListener('click', async () => {
   } finally {
       if (tesseractWorker) await tesseractWorker.terminate();
       currentPdfDoc = null; // Clean up
+      // Always restore button state
       generateFromPdfButton.disabled = false;
+      generateFromPdfButton.textContent = 'Generate';
       cancelPdfButton.disabled = false;
   }
 });
