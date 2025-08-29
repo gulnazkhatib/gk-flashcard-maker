@@ -8,7 +8,9 @@
   <script type="importmap">
   {
     "imports": {
-      "@google/genai": "https://esm.sh/@google/genai@^0.7.0"
+      "@google/genai": "https://esm.sh/@google/genai@^0.7.0",
+      "mammoth": "https://esm.sh/mammoth@1.7.2",
+      "pdfjs-dist": "https://esm.sh/pdfjs-dist@4.3.136"
     }
   }
   </script>
@@ -33,7 +35,7 @@
     <div id="generationContainer">
       <h1>Flashcard Generator</h1>
       <p>
-        Enter a topic or a list of terms and definitions to generate flashcards.
+        Enter a topic or a list of terms and definitions to generate flashcards or import an existing one.
       </p>
       <textarea
         id="topicInput"
@@ -41,21 +43,32 @@
       ></textarea>
       <div class="button-group">
         <button id="generateButton">Generate Flashcards</button>
-        <button id="importButton" class="secondary">Import Cards</button>
+        <button id="importButton" class="secondary">Import</button>
       </div>
-      <input type="file" id="fileInput" class="hidden" accept=".txt">
+      <p class="import-hint">Accepts .txt, .docx, .pdf</p>
+      <input type="file" id="fileInput" class="hidden" accept=".txt,.docx,.pdf">
     </div>
 
     <!-- Pre-Study Setup View -->
     <div id="preStudyContainer" class="hidden">
       <h2 id="preStudyTopic">Ready to Study?</h2>
+
+      <div id="sourceContentContainer" class="hidden">
+        <h3>Generated From:</h3>
+        <pre id="sourceContentPreview"></pre>
+      </div>
+
       <div class="settings-group">
         <label class="settings-label">Study Mode:</label>
         <div class="radio-group">
-          <input type="radio" id="termFirst" name="studyMode" value="termFirst" checked>
-          <label for="termFirst">Term ➡️ Definition</label>
-          <input type="radio" id="definitionFirst" name="studyMode" value="definitionFirst">
-          <label for="definitionFirst">Definition ➡️ Term</label>
+          <label for="termFirst">
+            <input type="radio" id="termFirst" name="studyMode" value="termFirst" checked>
+            Term ➡️ Definition
+          </label>
+          <label for="definitionFirst">
+            <input type="radio" id="definitionFirst" name="studyMode" value="definitionFirst">
+            Definition ➡️ Term
+          </label>
         </div>
       </div>
       <div class="settings-group">
@@ -92,6 +105,37 @@
 
     <div id="errorMessage" class="error-message"></div>
 
+  </div>
+
+  <!-- PDF Options Modal -->
+  <div id="pdfOptionsModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h2>Select PDF Pages</h2>
+      <p>Choose which pages to generate flashcards from.</p>
+      <div class="pdf-page-selector">
+        <div class="radio-group">
+          <label>
+            <input type="radio" id="allPagesRadio" name="pageSelection" value="all" checked>
+            All Pages (<span id="totalPagesSpan">0</span>)
+          </label>
+          <label>
+            <input type="radio" id="customRangeRadio" name="pageSelection" value="custom">
+            Custom Range
+          </label>
+        </div>
+        <div id="pageRangeSelector" class="hidden">
+           <label for="startPageInput">Start:</label>
+           <input type="number" id="startPageInput" min="1">
+           <label for="endPageInput">End:</label>
+           <input type="number" id="endPageInput" min="1">
+        </div>
+      </div>
+      <div id="pdfPreviewContainer"></div>
+      <div class="button-group">
+        <button id="generateFromPdfButton">Generate</button>
+        <button id="cancelPdfButton" class="secondary">Cancel</button>
+      </div>
+    </div>
   </div>
   
   <!-- Main Script -->
